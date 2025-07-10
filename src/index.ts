@@ -5,9 +5,11 @@ import zhCN from "./locale/zh-CN.yml";
 import { MessageReply, CommandReply } from "./types";
 import { parsePlatform } from "./utils";
 
+// 插件名称和用法说明
 export const name = "poke";
 export const usage = zhCN._usage;
 
+// 默认的回复消息配置
 const defaultMessage: MessageReply = {
   content: "<at id={userId}/> 戳你一下",
   weight: 50,
@@ -23,6 +25,7 @@ export interface Config {
   messages?: MessageReply[];
 }
 
+// 插件配置模式定义
 export const Config: Schema<Config> = Schema.intersect([
   Schema.object({
     filter: Schema.boolean().default(true).description("只响应戳自己的事件"),
@@ -76,10 +79,12 @@ export const Config: Schema<Config> = Schema.intersect([
 ]);
 
 export function apply(ctx: Context, config: Config) {
+  // 存储用户上次触发戳一戳的时间戳
   const cache = new Map<string, number>();
 
   ctx.i18n.define("zh-CN", zhCN);
 
+  // 注册戳一戳命令，允许主动戳其他用户
   ctx
     .platform("onebot")
     .command("poke [target:user]")
@@ -98,6 +103,7 @@ export function apply(ctx: Context, config: Config) {
         params.user_id = id;
       }
 
+      // 根据私聊或群聊环境发送不同的戳一戳请求
       if (session.isDirect) {
         await session.onebot._request("friend_poke", params);
       } else {
@@ -106,6 +112,7 @@ export function apply(ctx: Context, config: Config) {
       }
     });
 
+  // 监听并处理收到的戳一戳事件
   ctx.platform("onebot").on("notice", async (session: Session) => {
     // 不是戳一戳事件，则返回
     if (session.subtype != "poke") {
@@ -117,7 +124,7 @@ export function apply(ctx: Context, config: Config) {
       return;
     }
 
-    // 冷却中，则返回
+    // 检查冷却时间，防止频繁触发
     if (config.interval > 0 && cache.has(session.userId)) {
       const ts = cache.get(session.userId)!;
       if (session.timestamp - ts < config.interval) {
@@ -129,6 +136,7 @@ export function apply(ctx: Context, config: Config) {
     // 更新缓存
     cache.set(session.userId, session.timestamp);
 
+    // 根据配置的模式响应戳一戳
     switch (config.mode) {
       case "command":
         if (Math.random() * 100 < config.command.probability) {
@@ -148,6 +156,7 @@ export function apply(ctx: Context, config: Config) {
   });
 }
 
+// 根据权重随机选择一条回复消息
 function randomMessage(messages: MessageReply[]) {
   const totalWeight = messages.reduce((sum, cur) => sum + cur.weight, 0);
   const random = Math.random() * totalWeight;
