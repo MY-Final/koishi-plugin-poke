@@ -89,37 +89,47 @@ export const Config: Schema<Config> = Schema.intersect([
   // 新增: 群组特定配置
   Schema.object({
     groupConfigs: Schema.array(
-      Schema.object({
-        guildId: Schema.string().required().description("群聊ID"),
-        mode: Schema.union([
-          Schema.const("command").description("执行命令"),
-          Schema.const("message").description("回复消息"),
-        ])
-          .default("command")
-          .description("该群聊的响应模式"),
-        command: Schema.object({
-          content: Schema.string().default("status").description("命令内容"),
-          probability: Schema.number()
-            .min(0)
-            .max(100)
-            .role("slider")
-            .default(50)
-            .description("触发概率"),
-        }).description("该群聊的命令配置"),
-        messages: Schema.array(
+      Schema.intersect([
+        Schema.object({
+          guildId: Schema.string().required().description("群聊ID"),
+          mode: Schema.union([
+            Schema.const("command").description("执行命令"),
+            Schema.const("message").description("回复消息"),
+          ])
+            .default("command")
+            .description("该群聊的响应模式"),
+        }),
+        Schema.union([
           Schema.object({
-            content: Schema.string().required().description("消息内容"),
-            weight: Schema.number()
-              .min(0)
-              .max(100)
-              .default(50)
-              .description("权重"),
-          })
-        )
-          .role("table")
-          .default([defaultMessage])
-          .description("该群聊的消息内容"),
-      })
+            mode: Schema.const("command"),
+            command: Schema.object({
+              content: Schema.string().default("status").description("命令内容"),
+              probability: Schema.number()
+                .min(0)
+                .max(100)
+                .role("slider")
+                .default(50)
+                .description("触发概率"),
+            }),
+          }),
+          Schema.object({
+            mode: Schema.const("message"),
+            messages: Schema.array(
+              Schema.object({
+                content: Schema.string().required().description("消息内容"),
+                weight: Schema.number()
+                  .min(0)
+                  .max(100)
+                  .default(50)
+                  .description("权重"),
+              })
+            )
+              .role("table")
+              .default([defaultMessage])
+              .description("该群聊的消息内容"),
+          }),
+        ])
+      ])
     )
       .role("table")
       .default([])
